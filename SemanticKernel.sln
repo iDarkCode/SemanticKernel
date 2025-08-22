@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "McpAPI", "McpAPI", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ConsoleApp", "ConsoleApp", "{1C3465ED-5F05-4A5B-A1EC-E8F9CCE50DF3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SemanticKernel", "src\SKConsoleApp\SemanticKernel.csproj", "{2B5B1580-28CF-9AB6-58E6-6C73435D043D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvoicesMcpApi", "src\SKMcpApi\InvoicesMcpApi\InvoicesMcpApi.csproj", "{4AD45A59-7A15-47EB-873E-9F715033D47E}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{81DDED9D-158B-E303-5F62-77A2896D2A5A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2B5B1580-28CF-9AB6-58E6-6C73435D043D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B5B1580-28CF-9AB6-58E6-6C73435D043D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B5B1580-28CF-9AB6-58E6-6C73435D043D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B5B1580-28CF-9AB6-58E6-6C73435D043D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AD45A59-7A15-47EB-873E-9F715033D47E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AD45A59-7A15-47EB-873E-9F715033D47E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AD45A59-7A15-47EB-873E-9F715033D47E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AD45A59-7A15-47EB-873E-9F715033D47E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81DDED9D-158B-E303-5F62-77A2896D2A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2B5B1580-28CF-9AB6-58E6-6C73435D043D} = {1C3465ED-5F05-4A5B-A1EC-E8F9CCE50DF3}
+		{4AD45A59-7A15-47EB-873E-9F715033D47E} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C5D03AB5-AB71-4687-B837-F99841A76AD9}
+	EndGlobalSection
+EndGlobal

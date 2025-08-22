@@ -1,0 +1,6 @@
+services:
+  semantickernel:
+    image: ${DOCKER_REGISTRY-}semantickernel
+    build:
+      context: src/SKConsoleApp
+      dockerfile: Dockerfile
