@@ -1,5 +1,5 @@
 ﻿using InvoicesMcpApi.Domain;
-using SemanticKernel.Services;
+using InvoicesMcpApi.Services;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);

@@ -1,6 +1,6 @@
 using InvoicesMcpApi.Domain;
 
-namespace SemanticKernel.Services;
+namespace InvoicesMcpApi.Services;
 
 public class InvoiceService
 {

@@ -1,4 +1,5 @@
 using InvoicesMcpApi.Domain;
+using InvoicesMcpApi.Services;
 
 namespace SemanticKernel.Services;
 

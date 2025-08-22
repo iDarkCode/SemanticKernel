@@ -4,12 +4,46 @@ namespace SemanticKernel.Services;
 
 public class InvoiceService
 {
-    private readonly List<Invoice> _invoices = new()
+    private readonly List<Invoice> _invoices;
+
+    public InvoiceService()
     {
-        new Invoice { CustomerId = "C001", Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-10)), Status = InvoiceStatus.Paid, Total = 1000 },
-        new Invoice { CustomerId = "C002", Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-40)), Status = InvoiceStatus.Overdue, Total = 500 },
-        new Invoice { CustomerId = "C001", Date = DateOnly.FromDateTime(DateTime.Now.AddDays(-70)), Status = InvoiceStatus.Sent, Total = 750 },
-    };
+        var random = new Random();
+
+        // Clientes de ejemplo
+        var customers = new List<(string Id, string Name, string Document)>
+        {
+            ("CUST001", "Juan Pérez", "12345678A"),
+            ("CUST002", "María López", "87654321B"),
+            ("CUST003", "Carlos Gómez", "11223344C"),
+            ("CUST004", "Ana Torres", "55667788D"),
+            ("CUST005", "Luis Martínez", "99887766E"),
+            ("CUST006", "Sofía Ramírez", "33445566F"),
+            ("CUST007", "Pedro Castillo", "77889900G"),
+            ("CUST008", "Lucía Fernández", "44556677H"),
+            ("CUST009", "Diego Morales", "22334455I"),
+            ("CUST010", "Elena Vargas", "66778899J")
+        };
+
+        for (int i = 1; i <= 500; i++)
+        {
+            var customer = customers[random.Next(customers.Count)];
+
+            var invoice = new Invoice
+            {
+                Code = $"INV-{i:0000}",
+                CustomerId = customer.Id,
+                CustomerName = customer.Name,
+                CustomerDocument = customer.Document,
+                Date = DateOnly.FromDateTime(DateTime.Today.AddDays(-random.Next(0, 365))),
+                Status = (InvoiceStatus)random.Next(0, 3),
+                Total = Math.Round((decimal)(random.NextDouble() * 1000 + 50), 2)
+            };
+
+            _invoices ??= [];
+            _invoices.Add(invoice);
+        }
+    }
 
     public IEnumerable<Invoice> GetAll() => _invoices;
 
