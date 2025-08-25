@@ -35,7 +35,7 @@ public class InvoiceService
                 CustomerId = customer.Id,
                 CustomerName = customer.Name,
                 CustomerDocument = customer.Document,
-                Date = DateOnly.FromDateTime(DateTime.Today.AddDays(-random.Next(0, 365))),
+                Date = DateTime.Today.AddDays(-random.Next(0, 365)),
                 Status = (InvoiceStatus)random.Next(0, 3),
                 Total = Math.Round((decimal)(random.NextDouble() * 1000 + 50), 2)
             };
@@ -47,7 +47,7 @@ public class InvoiceService
 
     public IEnumerable<Invoice> GetAll() => _invoices;
 
-    public Task<IEnumerable<Invoice>> FilterAsync(string? customerId, DateOnly? from, DateOnly? to, InvoiceStatus? status, decimal? min, decimal? max, CancellationToken ct)
+    public Task<IEnumerable<Invoice>> FilterAsync(string? customerId, DateTime? from, DateTime? to, InvoiceStatus? status, decimal? min, decimal? max, CancellationToken ct)
     {
         var query = _invoices.AsQueryable();
         if (!string.IsNullOrEmpty(customerId)) query = query.Where(x => x.CustomerId == customerId);

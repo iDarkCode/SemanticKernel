@@ -2,27 +2,31 @@ using Microsoft.SemanticKernel;
 using SemanticKernel.Services;
 using SemanticKernel.Domain;
 using SemanticKernel.VectorStore;
+using System.ComponentModel;
 
 namespace SemanticKernel.SK;
 
-public sealed class InvoicePlugin
+public sealed class InvoicePlugin(InvoiceService invoiceService, AggregationService aggregationService, VectorSearchService vectorSearch)
 {
-    private readonly InvoiceService _invoiceService;
-    private readonly AggregationService _aggregationService;
-    private readonly VectorSearchService _vectorSearch;
+    private readonly InvoiceService _invoiceService = invoiceService;
+    private readonly AggregationService _aggregationService = aggregationService;
+    private readonly VectorSearchService _vectorSearch = vectorSearch;
 
-    public InvoicePlugin(InvoiceService invoiceService, AggregationService aggregationService, VectorSearchService vectorSearch)
+    [KernelFunction("obtener_factura")]
+    [Description("Obtiene los detalles de una factura específica dado su código.")]
+    public Invoice? ObtenerFactura([Description("Código identificador de la factura")]string invoiceCode, CancellationToken ct = default)
     {
-        _invoiceService = invoiceService;
-        _aggregationService = aggregationService;
-        _vectorSearch = vectorSearch;
+        var lst = _invoiceService.GetAll();
+        var invoice = lst.FirstOrDefault(i => i.Code.Equals(invoiceCode, StringComparison.OrdinalIgnoreCase));
+        return invoice;
     }
 
     [KernelFunction("filtrar_facturas")]
-    public async Task<IEnumerable<Invoice>> FiltrarFacturasAsync(string? clienteId = null, string? desde = null, string? hasta = null, string? estado = null, decimal? minTotal = null, decimal? maxTotal = null, CancellationToken ct = default)
+    [Description("Obtiene las facturas filtradas por diferentes criterios")]
+    public async Task<IEnumerable<Invoice>> FiltrarFacturasAsync(string? clienteId = null, DateTime? desde = null, DateTime? hasta = null, string? estado = null, decimal? minTotal = null, decimal? maxTotal = null, CancellationToken ct = default)
     {
-        DateOnly? from = desde != null ? DateOnly.Parse(desde) : null;
-        DateOnly? to = hasta != null ? DateOnly.Parse(hasta) : null;
+        DateTime? from = desde != null ? desde : null;
+        DateTime? to = hasta != null ? hasta : null;
         InvoiceStatus? status = estado != null ? Enum.Parse<InvoiceStatus>(estado, true) : null;
         return await _invoiceService.FilterAsync(clienteId, from, to, status, minTotal, maxTotal, ct);
     }
@@ -35,7 +39,7 @@ public sealed class InvoicePlugin
     }
 
     [KernelFunction("totales_por_ano")]
-    public async Task<IEnumerable<object>> TotalesPorAñoAsync(CancellationToken ct = default)
+    public async Task<IEnumerable<object>> TotalesPorAnoAsync(CancellationToken ct = default)
     {
         var data = await _aggregationService.TotalsByYearAsync(ct);
         return data.Select(x => new { x.Year, x.Total });

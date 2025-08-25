@@ -4,6 +4,8 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Connectors.Google;
+using Microsoft.SemanticKernel.Connectors.Ollama;
 using SemanticKernel.Services;
 using SemanticKernel.SK;
 using SemanticKernel.VectorStore;
@@ -12,16 +14,18 @@ using System.Runtime.CompilerServices;
 
 IChatCompletionService _chatCompletionService;
 ChatHistory _chatHistory;
-OpenAIPromptExecutionSettings _executionSettings;
+GeminiPromptExecutionSettings _executionSettings;
 
 
-InitializeKernels();
+Kernel kernel = InitializeKernels();
 ShowWelcomeMessage();
 
-await RunChatLoopAsync();
+await RunChatLoopAsync(kernel);
 
-async Task RunChatLoopAsync()
+async Task RunChatLoopAsync(Kernel kernel)
 {
+    KernelArguments _settings = new(_executionSettings);
+
     while (true)
     {
         var userInput = AnsiConsole.Ask<string>("[blue]User:[/]");
@@ -62,14 +66,16 @@ async Task RunChatLoopAsync()
                 .Spinner(Spinner.Known.Balloon)
                 .StartAsync("Pensando...", async _ =>
                 {
-                    ChatMessageContent? response = await _chatCompletionService
-                        .GetChatMessageContentAsync(_chatHistory, _executionSettings);
+                    //ChatMessageContent? response = await _chatCompletionService
+                    //    .GetChatMessageContentAsync(_chatHistory, _executionSettings);
 
-                    var text = response?.Items
-                        .OfType<TextContent>()
-                        .Select(t => t.Text)
-                        .FirstOrDefault() ?? "[Sin Respuesta]";
+                    //var text = response?.Items
+                    //    .OfType<TextContent>()
+                    //    .Select(t => t.Text)
+                    //    .FirstOrDefault() ?? "[Sin Respuesta]";
+                    var result = await kernel.InvokePromptAsync(userInput, _settings);
 
+                    var text = result.ToString();
                     _chatHistory.AddAssistantMessage(text);
                 });
 
@@ -121,9 +127,9 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
     return contents;
 }
 
-void InitializeKernels()
+Kernel InitializeKernels()
 {
-    var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey = "AIzaSyAtWk2kCE_nsG5-fjNBV4ju4HiMuils0Ng";//Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -145,9 +151,10 @@ void InitializeKernels()
 
     // 4. Configurar Semantic Kernel
     var kernelBuilder = Kernel.CreateBuilder()
-        .AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
-        .AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
-        .AddOpenAITextToAudio("tts-1", $"{openAIKey}")
+        .AddGoogleAIGeminiChatCompletion(modelId: "gemini-2.5-flash", apiKey: openAIKey)
+        //.AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
+        //.AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
+        //.AddOpenAITextToAudio("tts-1", $"{openAIKey}")
         ;
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
@@ -160,20 +167,30 @@ void InitializeKernels()
 
     var kernel = kernelBuilder.Build();
 
+    // registrar el plugin una vez construido
     var plugin = kernel.Services.GetRequiredService<InvoicePlugin>();
-    kernel.Plugins.AddFromObject(plugin, "invoices");
+    kernel.Plugins.AddFromObject(plugin, "Facturas");
 
     // Call configuration
-    _executionSettings = new OpenAIPromptExecutionSettings
+    _executionSettings = new GeminiPromptExecutionSettings
     {
-        MaxTokens = 4000,
-        Temperature = 0.7
+        Temperature = 0.7,
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
     };
 
     _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-
     _chatHistory = new ChatHistory("Eres un asistente útil");
 
+    foreach (var p in kernel.Plugins)
+    {
+        Console.WriteLine($"Plugin: {p.Name}");
+        foreach (var f in p)
+        {
+            Console.WriteLine($" - {f.Name}");
+        }
+    }
+
+    return kernel;
 }
 
 void ShowWelcomeMessage()
@@ -181,8 +198,8 @@ void ShowWelcomeMessage()
     AnsiConsole.MarkupLine("[bold green]Bienvenido Semantic Kernel Chat!![/]");
     AnsiConsole.MarkupLine("Opciones:");
     AnsiConsole.MarkupLine(" - Escribe texto y pulsa Enter");
-    AnsiConsole.MarkupLine(" - Escribe [blue]img[/] para adjuntar una imagen (ruta local o URL)");
-    AnsiConsole.MarkupLine(" - Escribe [red]exit[/] para salir.\n");
+    //AnsiConsole.MarkupLine(" - Escribe [blue]img[/] para adjuntar una imagen (ruta local o URL)");
+    //AnsiConsole.MarkupLine(" - Escribe [red]exit[/] para salir.\n");
 }
 
 string InferMimeType(string filePath)
