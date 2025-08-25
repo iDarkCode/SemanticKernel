@@ -129,7 +129,7 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
 
 Kernel InitializeKernels()
 {
-    var openAIKey = "AIzaSyAtWk2kCE_nsG5-fjNBV4ju4HiMuils0Ng";//Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
