@@ -34,7 +34,7 @@ public sealed class InvoicePlugin
         return data.Select(x => new { x.Month, x.Total });
     }
 
-    [KernelFunction("totales_por_año")]
+    [KernelFunction("totales_por_ano")]
     public async Task<IEnumerable<object>> TotalesPorAñoAsync(CancellationToken ct = default)
     {
         var data = await _aggregationService.TotalsByYearAsync(ct);
