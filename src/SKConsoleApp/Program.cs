@@ -14,7 +14,7 @@ using System.Runtime.CompilerServices;
 
 IChatCompletionService _chatCompletionService;
 ChatHistory _chatHistory;
-GeminiPromptExecutionSettings _executionSettings;
+OpenAIPromptExecutionSettings _executionSettings;
 
 
 Kernel kernel = InitializeKernels();
@@ -66,16 +66,17 @@ async Task RunChatLoopAsync(Kernel kernel)
                 .Spinner(Spinner.Known.Balloon)
                 .StartAsync("Pensando...", async _ =>
                 {
-                    //ChatMessageContent? response = await _chatCompletionService
-                    //    .GetChatMessageContentAsync(_chatHistory, _executionSettings);
+                    ChatMessageContent? response = await _chatCompletionService
+                        .GetChatMessageContentAsync(_chatHistory, _executionSettings, kernel);
 
-                    //var text = response?.Items
-                    //    .OfType<TextContent>()
-                    //    .Select(t => t.Text)
-                    //    .FirstOrDefault() ?? "[Sin Respuesta]";
-                    var result = await kernel.InvokePromptAsync(userInput, _settings);
+                    var text = response?.Items
+                        .OfType<TextContent>()
+                        .Select(t => t.Text)
+                        .FirstOrDefault() ?? "[Sin Respuesta]";
 
-                    var text = result.ToString();
+                    // var result = await kernel.InvokePromptAsync(userInput, _settings);
+                    //var text = result.ToString();
+
                     _chatHistory.AddAssistantMessage(text);
                 });
 
@@ -151,35 +152,32 @@ Kernel InitializeKernels()
 
     // 4. Configurar Semantic Kernel
     var kernelBuilder = Kernel.CreateBuilder()
-        .AddGoogleAIGeminiChatCompletion(modelId: "gemini-2.5-flash", apiKey: openAIKey)
-        //.AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
+        //.AddGoogleAIGeminiChatCompletion(modelId: "gemini-2.5-flash", apiKey: openAIKey)
+        .AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
         //.AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
         //.AddOpenAITextToAudio("tts-1", $"{openAIKey}")
         ;
+
+    //Registrar las herramientas como funciones en SK
+    //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
+
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
     kernelBuilder.Services.AddSingleton<VectorSearchService>();
     kernelBuilder.Services.AddSingleton<InvoicePlugin>();
     kernelBuilder.Services.AddLogging();
 
-    // Registrar las herramientas como funciones en SK
-    //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
+    kernelBuilder.Plugins.AddFromType<SystemInfoPlugin>();
+    kernelBuilder.Plugins.AddFromObject(new FilePlugin(new FileService()));
 
     var kernel = kernelBuilder.Build();
+    
+    KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
 
     // registrar el plugin una vez construido
     var plugin = kernel.Services.GetRequiredService<InvoicePlugin>();
     kernel.Plugins.AddFromObject(plugin, "Facturas");
 
-    // Call configuration
-    _executionSettings = new GeminiPromptExecutionSettings
-    {
-        Temperature = 0.7,
-        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
-    };
-
-    _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-    _chatHistory = new ChatHistory("Eres un asistente útil");
 
     foreach (var p in kernel.Plugins)
     {
@@ -189,6 +187,16 @@ Kernel InitializeKernels()
             Console.WriteLine($" - {f.Name}");
         }
     }
+
+    _executionSettings = new OpenAIPromptExecutionSettings
+    {
+        //    MaxTokens = 2048,
+        //    Temperature = 0.5,
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+    };
+
+    _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+    _chatHistory = new ChatHistory("Eres un asistente útil");
 
     return kernel;
 }
