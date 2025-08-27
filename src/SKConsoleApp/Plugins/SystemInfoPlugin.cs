@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Text;
 
-namespace SemanticKernel.SK;
+namespace SemanticKernel.Plugins;
 
 public class SystemInfoPlugin
 {

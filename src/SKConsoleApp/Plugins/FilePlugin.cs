@@ -2,7 +2,7 @@
 using SemanticKernel.Services;
 using System.ComponentModel;
 
-namespace SemanticKernel.SK;
+namespace SemanticKernel.Plugins;
 
 public class FilePlugin(IFileService fileService)
 {

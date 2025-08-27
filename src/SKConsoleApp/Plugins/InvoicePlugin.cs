@@ -4,7 +4,7 @@ using SemanticKernel.Domain;
 using SemanticKernel.VectorStore;
 using System.ComponentModel;
 
-namespace SemanticKernel.SK;
+namespace SemanticKernel.Plugins;
 
 public sealed class InvoicePlugin(InvoiceService invoiceService, AggregationService aggregationService, VectorSearchService vectorSearch)
 {
