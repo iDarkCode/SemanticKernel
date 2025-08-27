@@ -187,10 +187,9 @@ Kernel InitializeKernels()
     kernelBuilder.Services.AddSingleton<SystemInfoPlugin>();
     kernelBuilder.Services.AddLogging();
 
-    //portipo
-    //kernelBuilder.Plugins.AddFromType<SystemInfoPlugin>();
-    //manual
-    //kernelBuilder.Plugins.AddFromObject(new FilePlugin(new FileService()));
+    kernelBuilder.Plugins.AddFromType<SystemInfoPlugin>();
+    kernelBuilder.Plugins.AddFromType<InvoicePlugin>();
+    kernelBuilder.Plugins.AddFromType<FilePlugin>();
 
     //construimos el kernel
     var kernel = kernelBuilder.Build();
@@ -198,12 +197,12 @@ Kernel InitializeKernels()
     //KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
 
     // registrar el plugin una vez construido por DI
-    var invoicePlugin = kernel.Services.GetRequiredService<InvoicePlugin>();
-    kernel.Plugins.AddFromObject(invoicePlugin, "Facturas");
-    var filePlugin = kernel.Services.GetRequiredService<FilePlugin>();
-    kernel.Plugins.AddFromObject(filePlugin, "Archivos");
-    var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
-    kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
+    //var invoicePlugin = kernel.Services.GetRequiredService<InvoicePlugin>();
+    //kernel.Plugins.AddFromObject(invoicePlugin, "Facturas");
+    //var filePlugin = kernel.Services.GetRequiredService<FilePlugin>();
+    //kernel.Plugins.AddFromObject(filePlugin, "Archivos");
+    //var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
+    //kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
 
     foreach (var p in kernel.Plugins)
     {

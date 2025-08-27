@@ -1,10 +1,10 @@
-version: "3.9"
+version: "3.8"
 
 services:
   mcpapi:
     build:
-      context: ./McpApi
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: src/SKMcpApi/InvoicesMcpApi/Dockerfile
     container_name: mcpapi
     ports:
       - "5000:8080"  
@@ -13,8 +13,8 @@ services:
 
   consoleapp:
     build:
-      context: ./ConsoleApp
-      dockerfile: Dockerfile
+      context: . 
+      dockerfile: src/SKConsoleApp/Dockerfile
     container_name: consoleapp
     stdin_open: true     
     tty: true
