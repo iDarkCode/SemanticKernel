@@ -1,6 +1,28 @@
+version: "3.9"
+
 services:
-  semantickernel:
-    image: ${DOCKER_REGISTRY-}semantickernel
+  mcpapi:
     build:
-      context: src/SKConsoleApp
+      context: ./McpApi
       dockerfile: Dockerfile
+    container_name: mcpapi
+    ports:
+      - "5000:8080"  
+    networks:
+      - sknet
+
+  consoleapp:
+    build:
+      context: ./ConsoleApp
+      dockerfile: Dockerfile
+    container_name: consoleapp
+    stdin_open: true     
+    tty: true
+    depends_on:
+      - mcpapi
+    networks:
+      - sknet
+
+networks:
+  sknet:
+    driver: bridge

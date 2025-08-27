@@ -4,7 +4,7 @@ namespace InvoicesMcpApi.Services;
 
 public class InvoiceService
 {
-    private readonly List<Invoice> _invoices;
+    private readonly List<Invoice> _invoices = [];
 
     public InvoiceService()
     {
@@ -39,8 +39,7 @@ public class InvoiceService
                 Status = (InvoiceStatus)random.Next(0, 3),
                 Total = Math.Round((decimal)(random.NextDouble() * 1000 + 50), 2)
             };
-
-            _invoices ??= [];
+            
             _invoices.Add(invoice);
         }
     }

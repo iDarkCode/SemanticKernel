@@ -4,7 +4,7 @@ namespace SemanticKernel.Services;
 
 public class InvoiceService
 {
-    private readonly List<Invoice> _invoices;
+    private readonly List<Invoice> _invoices = [];
 
     public InvoiceService()
     {
@@ -40,7 +40,7 @@ public class InvoiceService
                 Total = Math.Round((decimal)(random.NextDouble() * 1000 + 50), 2)
             };
 
-            _invoices ??= [];
+            _invoices = [];
             _invoices.Add(invoice);
         }
     }

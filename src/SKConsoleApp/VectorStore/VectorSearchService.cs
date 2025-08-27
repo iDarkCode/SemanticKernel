@@ -3,11 +3,9 @@ using SemanticKernel.Services;
 
 namespace SemanticKernel.VectorStore;
 
-public class VectorSearchService
+public class VectorSearchService(InvoiceService invoiceService)
 {
-    private readonly InvoiceService _invoiceService;
-
-    public VectorSearchService(InvoiceService invoiceService) => _invoiceService = invoiceService;
+    private readonly InvoiceService _invoiceService = invoiceService;
 
     public Task<IEnumerable<(Invoice Invoice, double Score)>> SearchAsync(string query, int topK, CancellationToken ct)
     {

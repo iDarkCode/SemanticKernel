@@ -2,11 +2,9 @@ using SemanticKernel.Domain;
 
 namespace SemanticKernel.Services;
 
-public class AggregationService
+public class AggregationService(InvoiceService invoiceService)
 {
-    private readonly InvoiceService _invoiceService;
-
-    public AggregationService(InvoiceService invoiceService) => _invoiceService = invoiceService;
+    private readonly InvoiceService _invoiceService = invoiceService;
 
     public Task<IEnumerable<(int Month, decimal Total)>> TotalsByMonthAsync(int? year, CancellationToken ct)
     {

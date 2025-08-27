@@ -24,79 +24,96 @@ await RunChatLoopAsync(kernel);
 
 async Task RunChatLoopAsync(Kernel kernel)
 {
-    KernelArguments _settings = new(_executionSettings);
+    var settings = new KernelArguments(_executionSettings);
 
     while (true)
     {
         var userInput = AnsiConsole.Ask<string>("[blue]User:[/]");
-        if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase))
+
+        if (IsExitCommand(userInput))
         {
             AnsiConsole.MarkupLine("[bold red]Desconectando del chat...[/]");
             break;
         }
-        else if (userInput.Equals("img", StringComparison.OrdinalIgnoreCase))
+
+        if (IsImageCommand(userInput))
         {
-            var imagePathOrUrl = AnsiConsole.Prompt(
-                new TextPrompt<string>("[blue]Introduzca la ruta de la imagen (local) o URL:[/]")
-                    .Validate(pathOrUrl =>
-                    {
-                        if (string.IsNullOrWhiteSpace(pathOrUrl))
-                            return ValidationResult.Error("[red]La ruta o URL de la imagen no puede estar vacía.[/]");
-                        return ValidationResult.Success();
-                    })
-            );
-
-            var additionalText =
-                AnsiConsole.Ask<string>("[blue](Deja vacío si no quieres añadir texto):[/]");
-
-            var userMessageContents = CreateUserContentAsync(additionalText, imagePathOrUrl);
-            if (userMessageContents is null)
-                continue;
-
-            _chatHistory.AddUserMessage(userMessageContents);
+            if (!HandleImageInput()) continue;
         }
         else
         {
             _chatHistory.AddUserMessage(userInput);
         }
 
-        try
-        {
-            await AnsiConsole.Status()
-                .Spinner(Spinner.Known.Balloon)
-                .StartAsync("Pensando...", async _ =>
-                {
-                    ChatMessageContent? response = await _chatCompletionService
-                        .GetChatMessageContentAsync(_chatHistory, _executionSettings, kernel);
-
-                    var text = response?.Items
-                        .OfType<TextContent>()
-                        .Select(t => t.Text)
-                        .FirstOrDefault() ?? "[Sin Respuesta]";
-
-                    // var result = await kernel.InvokePromptAsync(userInput, _settings);
-                    //var text = result.ToString();
-
-                    _chatHistory.AddAssistantMessage(text);
-                });
-
-            var lastMessage = _chatHistory.LastOrDefault();
-            AnsiConsole.MarkupLine($"[bold green]Assistant:[/] {lastMessage}\n");
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}\n");
-        }
+        await GenerateAssistantResponse(kernel, settings);
     }
 }
+
+bool IsExitCommand(string input) =>
+    input.Equals("exit", StringComparison.OrdinalIgnoreCase);
+
+bool IsImageCommand(string input) =>
+    input.Equals("img", StringComparison.OrdinalIgnoreCase);
+
+bool HandleImageInput()
+{
+    var imagePathOrUrl = AnsiConsole.Prompt(
+        new TextPrompt<string>("[blue]Introduzca la ruta de la imagen (local) o URL:[/]")
+            .Validate(pathOrUrl =>
+                string.IsNullOrWhiteSpace(pathOrUrl)
+                    ? ValidationResult.Error("[red]La ruta o URL de la imagen no puede estar vacía.[/]")
+                    : ValidationResult.Success()
+            )
+    );
+
+    var additionalText = AnsiConsole.Ask<string>("[blue](Deja vacío si no quieres añadir texto):[/]");
+
+    var userMessageContents = CreateUserContentAsync(additionalText, imagePathOrUrl);
+    
+    if (userMessageContents is null) 
+        return false;
+
+    _chatHistory.AddUserMessage(userMessageContents);
+
+    return true;
+}
+
+async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
+{
+    try
+    {
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Balloon)
+            .StartAsync("Pensando...", async _ =>
+            {
+                ChatMessageContent? response = await _chatCompletionService
+                    .GetChatMessageContentAsync(_chatHistory, _executionSettings, kernel);
+
+                var text = response?.Items
+                    .OfType<TextContent>()
+                    .Select(t => t.Text)
+                    .FirstOrDefault() ?? "[Sin Respuesta]";
+
+                _chatHistory.AddAssistantMessage(text);
+            });
+
+        var lastMessage = _chatHistory.LastOrDefault();
+        AnsiConsole.MarkupLine($"[bold green]Assistant:[/] {lastMessage}\n");
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}\n");
+    }
+}
+
 
 ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, string imagePathOrUrl)
 {
     var contents = new ChatMessageContentItemCollection
     {
         !string.IsNullOrWhiteSpace(additionalText)
-        ? new TextContent(additionalText)
-        : new TextContent("Dame la descripción de la imagen")
+            ? new TextContent(additionalText)
+            : new TextContent("Dame la descripción de la imagen")
     };
 
     if (imagePathOrUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
@@ -154,30 +171,39 @@ Kernel InitializeKernels()
     var kernelBuilder = Kernel.CreateBuilder()
         //.AddGoogleAIGeminiChatCompletion(modelId: "gemini-2.5-flash", apiKey: openAIKey)
         .AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
-        //.AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
-        //.AddOpenAITextToAudio("tts-1", $"{openAIKey}")
+        .AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
+        .AddOpenAITextToAudio("tts-1", $"{openAIKey}")
         ;
 
-    //Registrar las herramientas como funciones en SK
+    //5. Registrar las herramientas como funciones en SK
     //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
 
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
     kernelBuilder.Services.AddSingleton<VectorSearchService>();
     kernelBuilder.Services.AddSingleton<InvoicePlugin>();
+    kernelBuilder.Services.AddSingleton<IFileService, FileService>();
+    kernelBuilder.Services.AddSingleton<FilePlugin>();
+    kernelBuilder.Services.AddSingleton<SystemInfoPlugin>();
     kernelBuilder.Services.AddLogging();
 
-    kernelBuilder.Plugins.AddFromType<SystemInfoPlugin>();
-    kernelBuilder.Plugins.AddFromObject(new FilePlugin(new FileService()));
+    //portipo
+    //kernelBuilder.Plugins.AddFromType<SystemInfoPlugin>();
+    //manual
+    //kernelBuilder.Plugins.AddFromObject(new FilePlugin(new FileService()));
 
+    //construimos el kernel
     var kernel = kernelBuilder.Build();
     
-    KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
+    //KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
 
-    // registrar el plugin una vez construido
-    var plugin = kernel.Services.GetRequiredService<InvoicePlugin>();
-    kernel.Plugins.AddFromObject(plugin, "Facturas");
-
+    // registrar el plugin una vez construido por DI
+    var invoicePlugin = kernel.Services.GetRequiredService<InvoicePlugin>();
+    kernel.Plugins.AddFromObject(invoicePlugin, "Facturas");
+    var filePlugin = kernel.Services.GetRequiredService<FilePlugin>();
+    kernel.Plugins.AddFromObject(filePlugin, "Archivos");
+    var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
+    kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
 
     foreach (var p in kernel.Plugins)
     {
@@ -190,8 +216,8 @@ Kernel InitializeKernels()
 
     _executionSettings = new OpenAIPromptExecutionSettings
     {
-        //    MaxTokens = 2048,
-        //    Temperature = 0.5,
+        MaxTokens = 2048,
+        Temperature = 0.6,
         FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
     };
 

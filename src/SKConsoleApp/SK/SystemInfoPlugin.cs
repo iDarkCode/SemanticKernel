@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Management;
 using System.Text;
 
-namespace SemanticKernel.Services;
+namespace SemanticKernel.SK;
 
 public class SystemInfoPlugin
 {
@@ -69,7 +69,7 @@ public class SystemInfoPlugin
             {
                 // Could throw an exception if we don't have access to certain processes (AccessDenied).
                 memBytes = proc.WorkingSet64;
-                percentage = (memBytes / totalMemoryBytes) * 100.0;
+                percentage = memBytes / totalMemoryBytes * 100.0;
             }
             catch (Exception ex)
             {
