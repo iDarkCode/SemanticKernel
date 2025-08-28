@@ -10,6 +10,7 @@ using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using Microsoft.SemanticKernel.PromptTemplates.Liquid;
 using SemanticKernel;
+using SemanticKernel.Domain;
 using SemanticKernel.Plugins;
 using SemanticKernel.Services;
 using SemanticKernel.VectorStore;
@@ -151,7 +152,7 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
 
 async Task<Kernel> InitializeKernels()
 {
-    var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey =  Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -180,13 +181,14 @@ async Task<Kernel> InitializeKernels()
         // Embeddings
         .AddOpenAIEmbeddingGenerator(
             modelId: "text-embedding-3-small",
-            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "YOUR_API_KEY")
+            apiKey: openAIKey)
         ;
     
     //5. Registrar las herramientas como funciones en SK
     //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
 
     kernelBuilder.Services.AddInMemoryVectorStore();
+    kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, FunctionInvocationFilter>();
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
     kernelBuilder.Services.AddSingleton<VectorSearchService>();
@@ -205,19 +207,16 @@ async Task<Kernel> InitializeKernels()
 
 
     var vectorStore = new InMemoryVectorStore();
-
     var collection = vectorStore.GetCollection<string, Faq>("faqs");
-
     await collection.EnsureCollectionExistsAsync();
 
     // Cargar FAQs
-    var faqs = JsonSerializer.Deserialize<Faq[]>(File.ReadAllText("faqs.json"))!.ToList();
+    var faqs = JsonSerializer.Deserialize<Faq[]>(File.ReadAllText("./Resources/faqs.json"))!.ToList();
 
     foreach (var faq in faqs)
         await collection.UpsertAsync(faq);
 
     //KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
-
     //DI?
     /*
      * var services = new ServiceCollection();
@@ -250,6 +249,15 @@ async Task<Kernel> InitializeKernels()
     //var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
     //kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
     */
+     
+
+    _executionSettings = new OpenAIPromptExecutionSettings
+    {
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+    };
+
+    _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
+    _chatHistory = new ChatHistory("Eres un asistente útil");
 
     foreach (var p in kernel.Plugins)
     {
@@ -260,28 +268,16 @@ async Task<Kernel> InitializeKernels()
         }
     }
 
-    _executionSettings = new OpenAIPromptExecutionSettings
-    {
-        MaxTokens = 2048,
-        Temperature = 0.6,
-        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
-    };
-
-    _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();
-    _chatHistory = new ChatHistory("Eres un asistente útil");
-
     return kernel;
 }
-
-
 
 void ShowWelcomeMessage()
 {
     AnsiConsole.MarkupLine("[bold green]Bienvenido Semantic Kernel Chat!![/]");
     AnsiConsole.MarkupLine("Opciones:");
     AnsiConsole.MarkupLine(" - Escribe texto y pulsa Enter");
-    //AnsiConsole.MarkupLine(" - Escribe [blue]img[/] para adjuntar una imagen (ruta local o URL)");
-    //AnsiConsole.MarkupLine(" - Escribe [red]exit[/] para salir.\n");
+    AnsiConsole.MarkupLine(" - Escribe [blue]img[/] para adjuntar una imagen (ruta local o URL)");
+    AnsiConsole.MarkupLine(" - Escribe [red]exit[/] para salir.\n");
 }
 
 string InferMimeType(string filePath)
@@ -295,7 +291,6 @@ string InferMimeType(string filePath)
         _ => "image/jpeg"
     };
 }
-
 
 async Task PromptFunctionsHandleBarsTemplates()
 {
@@ -532,5 +527,3 @@ async Task PromptFunctionsYamlTemplates()
 //}
 
 public partial class Program { }
-
-record Faq(string Id, string Question, string Answer);
