@@ -1,0 +1,18 @@
+[
+  {
+    "id": "faq1",
+    "question": "¿Cuál es el horario de atención?",
+    "answer": "Atendemos de lunes a viernes de 9:00 a 18:00."
+  },
+  {
+    "id": "faq2",
+    "question": "¿Cómo contacto con soporte?",
+    "answer": "Puedes escribirnos a soporte@empresa.com."
+  },
+  {
+    "id": "faq3",
+    "question": "¿Dónde están ubicados?",
+    "answer": "Nuestra oficina principal está en Madrid."
+  }
+]
+

@@ -1,9 +1,12 @@
-#pragma warning disable SKEXP0010 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-#pragma warning disable SKEXP0001 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+#pragma warning disable SKEXP0010
+#pragma warning disable SKEXP0001
+#pragma warning disable SKEXP0050
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using Microsoft.SemanticKernel.PromptTemplates.Liquid;
 using SemanticKernel;
@@ -11,15 +14,16 @@ using SemanticKernel.Plugins;
 using SemanticKernel.Services;
 using SemanticKernel.VectorStore;
 using Spectre.Console;
+using System.Text.Json;
 
-IChatCompletionService _chatCompletionService;
-ChatHistory _chatHistory;
-OpenAIPromptExecutionSettings _executionSettings;
+IChatCompletionService _chatCompletionService = default!;
+ChatHistory _chatHistory = default!;
+OpenAIPromptExecutionSettings _executionSettings = default!;
 
 
-Kernel kernel = InitializeKernels();
+Kernel kernel = await InitializeKernels();
+
 ShowWelcomeMessage();
-
 await RunChatLoopAsync(kernel);
 
 async Task RunChatLoopAsync(Kernel kernel)
@@ -145,7 +149,7 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
     return contents;
 }
 
-Kernel InitializeKernels()
+async Task<Kernel> InitializeKernels()
 {
     var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
@@ -173,11 +177,16 @@ Kernel InitializeKernels()
         .AddOpenAIChatCompletion("gpt-4o-mini-2024-07-18", $"{openAIKey}")
         .AddOpenAITextToImage($"{openAIKey}", modelId: "dall-e-3")
         .AddOpenAITextToAudio("tts-1", $"{openAIKey}")
+        // Embeddings
+        .AddOpenAIEmbeddingGenerator(
+            modelId: "text-embedding-3-small",
+            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "YOUR_API_KEY")
         ;
-
+    
     //5. Registrar las herramientas como funciones en SK
     //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
 
+    kernelBuilder.Services.AddInMemoryVectorStore();
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
     kernelBuilder.Services.AddSingleton<VectorSearchService>();
@@ -193,9 +202,46 @@ Kernel InitializeKernels()
 
     //construimos el kernel
     var kernel = kernelBuilder.Build();
-    
+
+
+    var vectorStore = new InMemoryVectorStore();
+
+    var collection = vectorStore.GetCollection<string, Faq>("faqs");
+
+    await collection.EnsureCollectionExistsAsync();
+
+    // Cargar FAQs
+    var faqs = JsonSerializer.Deserialize<Faq[]>(File.ReadAllText("faqs.json"))!.ToList();
+
+    foreach (var faq in faqs)
+        await collection.UpsertAsync(faq);
+
     //KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
 
+    //DI?
+    /*
+     * var services = new ServiceCollection();
+
+        // Embeddings y chat de OpenAI
+        services.AddOpenAIEmbeddingGenerator(
+            modelId: "text-embedding-3-small",
+            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "YOUR_API_KEY"
+        );
+        services.AddOpenAIChatCompletion(
+            modelId: "gpt-4o-mini",
+            apiKey: Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "YOUR_API_KEY"
+        );
+
+        // InMemory VectorStore
+        services.AddInMemoryVectorStore();
+
+        services.AddTransient<Kernel>(sp => Kernel.Create(sp));
+        var sp = services.BuildServiceProvider();
+        var kernel = sp.GetRequiredService<Kernel>();
+
+        var embedder = kernel.GetRequiredService<IEmbeddingGenerationService>();
+        var memory = sp.GetRequiredService<IVectorStore>();
+     * 
     // registrar el plugin una vez construido por DI
     //var invoicePlugin = kernel.Services.GetRequiredService<InvoicePlugin>();
     //kernel.Plugins.AddFromObject(invoicePlugin, "Facturas");
@@ -203,6 +249,7 @@ Kernel InitializeKernels()
     //kernel.Plugins.AddFromObject(filePlugin, "Archivos");
     //var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
     //kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
+    */
 
     foreach (var p in kernel.Plugins)
     {
@@ -225,6 +272,8 @@ Kernel InitializeKernels()
 
     return kernel;
 }
+
+
 
 void ShowWelcomeMessage()
 {
@@ -483,3 +532,5 @@ async Task PromptFunctionsYamlTemplates()
 //}
 
 public partial class Program { }
+
+record Faq(string Id, string Question, string Answer);
