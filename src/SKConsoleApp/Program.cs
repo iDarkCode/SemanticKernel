@@ -2,6 +2,7 @@
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0050
 
+using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.InMemory;
@@ -9,6 +10,7 @@ using Microsoft.SemanticKernel.Connectors.OpenAI;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using Microsoft.SemanticKernel.PromptTemplates.Liquid;
+using OpenAI.Embeddings;
 using SemanticKernel;
 using SemanticKernel.Domain;
 using SemanticKernel.Plugins;
@@ -95,7 +97,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
                     .GetChatMessageContentAsync(_chatHistory, _executionSettings, kernel);
 
                 var text = response?.Items
-                    .OfType<TextContent>()
+                    .OfType<Microsoft.SemanticKernel.TextContent>()
                     .Select(t => t.Text)
                     .FirstOrDefault() ?? "[Sin Respuesta]";
 
@@ -117,8 +119,8 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
     var contents = new ChatMessageContentItemCollection
     {
         !string.IsNullOrWhiteSpace(additionalText)
-            ? new TextContent(additionalText)
-            : new TextContent("Dame la descripción de la imagen")
+            ? new Microsoft.SemanticKernel.TextContent(additionalText)
+            : new Microsoft.SemanticKernel.TextContent("Dame la descripción de la imagen")
     };
 
     if (imagePathOrUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
@@ -152,7 +154,7 @@ ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, 
 
 async Task<Kernel> InitializeKernels()
 {
-    var openAIKey =  Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -180,13 +182,13 @@ async Task<Kernel> InitializeKernels()
         .AddOpenAITextToAudio("tts-1", $"{openAIKey}")
         // Embeddings
         .AddOpenAIEmbeddingGenerator(
-            modelId: "text-embedding-3-small",
-            apiKey: openAIKey)
-        ;
-    
+            modelId: "text-embedding-ada-002",
+            apiKey: openAIKey) ;
+
     //5. Registrar las herramientas como funciones en SK
     //kernelBuilder.Plugins.AddFromFunctions("Invoices", tools.Select(t => t.AsKernelFunction()));
 
+    //vectorstores
     kernelBuilder.Services.AddInMemoryVectorStore();
     kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, FunctionInvocationFilter>();
     kernelBuilder.Services.AddSingleton<InvoiceService>();
@@ -207,16 +209,43 @@ async Task<Kernel> InitializeKernels()
 
 
     var vectorStore = new InMemoryVectorStore();
-    var collection = vectorStore.GetCollection<string, Faq>("faqs");
+    var collection = new InMemoryCollection<string, Faq>("faqs");//vectorStore.GetCollection<string, Faq>("faqs");
+
     await collection.EnsureCollectionExistsAsync();
 
     // Cargar FAQs
-    var faqs = JsonSerializer.Deserialize<Faq[]>(File.ReadAllText("./Resources/faqs.json"))!.ToList();
+    var faqs = JsonSerializer.Deserialize<List<Faq>>(File.ReadAllText("./Resources/faqs.json"))!.ToList();
 
-    foreach (var faq in faqs)
-        await collection.UpsertAsync(faq);
+    var embeddingGenerator = kernel
+             .GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
 
-    //KernelPlugin systemInfoPlugin = KernelPluginFactory.CreateFromType<SystemInfoPlugin>();
+    var tasks = faqs.Select(faq => Task.Run(async () =>
+    {
+            faq.DefinitionEmbedding = await embeddingGenerator.GenerateAsync(faq.Answer);
+    }));
+
+    await Task.WhenAll(tasks);
+
+    await collection.UpsertAsync(faqs);
+
+    var record = await collection.GetAsync("faq1");
+    Console.WriteLine($"vectorCollection: {record!.Answer}");
+
+    string textSearch = "Que horario hay de atencion al cliente";
+
+    var searchVector = await embeddingGenerator.GenerateAsync(textSearch);
+
+    Microsoft.Extensions.VectorData.VectorSearchResult<Faq>[] searchResult = [];
+    await foreach (Microsoft.Extensions.VectorData.VectorSearchResult<Faq> item in collection.SearchAsync(searchVector, 1))
+    {
+        searchResult.Prepend(item);
+        break;
+    }
+
+    var searchResultItems = searchResult.FirstOrDefault();
+    Console.WriteLine(searchResultItems!.Record.Answer);
+    Console.WriteLine(searchResultItems!.Score);
+
     //DI?
     /*
      * var services = new ServiceCollection();
@@ -249,7 +278,7 @@ async Task<Kernel> InitializeKernels()
     //var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
     //kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
     */
-     
+
 
     _executionSettings = new OpenAIPromptExecutionSettings
     {

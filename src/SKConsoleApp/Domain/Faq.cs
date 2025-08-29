@@ -1,28 +1,30 @@
 ﻿#pragma warning disable SKEXP0001
 
-using Microsoft.SemanticKernel.Data;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.VectorData;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.SemanticKernel.Data;
+using Newtonsoft.Json;
 
 namespace SemanticKernel.Domain;
 
 public class Faq
 {
+    [JsonProperty("key")]
     [VectorStoreKey]
     [TextSearchResultName]
-    public string key { get; set; }
-    [VectorStoreData(IsFullTextIndexed = true)]
-    public string category { get; set; }
+    public string Key { get; set; } = default!;
+    [JsonProperty("category")]
     [VectorStoreData]
-    public string question { get; set; }
+    public string Category { get; set; } = default!;
+    [JsonProperty("question")]
+    [VectorStoreData]
+    public string Question { get; set; } = default!;
+    [JsonProperty("answer")]
     [VectorStoreData]
     [TextSearchResultValue]
-    public string definition { get; set; }
+    public string Answer { get; set; } = default!;
+    [JsonIgnore]
     [VectorStoreVector(1536)]
-    public ReadOnlyMemory<float> definitionEmbedding { get; set; } 
+    public Embedding<float> DefinitionEmbedding { get; set; } = default!;
 
 }
