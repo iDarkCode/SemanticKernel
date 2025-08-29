@@ -3,10 +3,12 @@
 #pragma warning disable SKEXP0050
 
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.VectorData;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using Microsoft.SemanticKernel.Data;
 using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using Microsoft.SemanticKernel.PromptTemplates.Liquid;
@@ -22,7 +24,7 @@ using System.Text.Json;
 IChatCompletionService _chatCompletionService = default!;
 ChatHistory _chatHistory = default!;
 OpenAIPromptExecutionSettings _executionSettings = default!;
-
+InMemoryCollection<string, Faq>? collection = null;
 
 Kernel kernel = await InitializeKernels();
 
@@ -93,8 +95,29 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
             .Spinner(Spinner.Known.Balloon)
             .StartAsync("Pensando...", async _ =>
             {
-                ChatMessageContent? response = await _chatCompletionService
-                    .GetChatMessageContentAsync(_chatHistory, _executionSettings, kernel);
+                var lastUserMsg = _chatHistory.LastOrDefault(m => m.Role == AuthorRole.User);
+                string query = lastUserMsg?.Items.OfType<Microsoft.SemanticKernel.TextContent>()
+                                   .FirstOrDefault()?.Text ?? "";
+                               
+                var embedder = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+                var texSearch = new VectorStoreTextSearch<Faq>(collection!, embedder);
+
+                var searchResults = await texSearch.GetTextSearchResultsAsync(
+                    query,
+                    new() { Top = 2 });
+
+                string context = "";
+                await foreach (var item in searchResults.Results)
+                {
+                    context += $"- {item.Value}\n";
+                }
+
+                var augmentedUserMessage = $"Pregunta: {query}\n\nContexto relevante:\n{context}";
+                _chatHistory.AddUserMessage(augmentedUserMessage);
+
+                ChatMessageContent? response =
+                    await _chatCompletionService.GetChatMessageContentAsync(
+                        _chatHistory, _executionSettings, kernel);
 
                 var text = response?.Items
                     .OfType<Microsoft.SemanticKernel.TextContent>()
@@ -209,7 +232,7 @@ async Task<Kernel> InitializeKernels()
 
 
     var vectorStore = new InMemoryVectorStore();
-    var collection = new InMemoryCollection<string, Faq>("faqs");//vectorStore.GetCollection<string, Faq>("faqs");
+    collection = new InMemoryCollection<string, Faq>("faqs");
 
     await collection.EnsureCollectionExistsAsync();
 
@@ -231,24 +254,52 @@ async Task<Kernel> InitializeKernels()
     var record = await collection.GetAsync("faq1");
     Console.WriteLine($"vectorCollection: {record!.Answer}");
 
-    string textSearch = "Que horario hay de atencion al cliente";
+   // string textSearch = "Que horario hay de atencion al cliente";
 
-    var searchVector = await embeddingGenerator.GenerateAsync(textSearch);
+    //var searchVector = await embeddingGenerator.GenerateAsync(textSearch);
 
-    Microsoft.Extensions.VectorData.VectorSearchResult<Faq>[] searchResult = [];
-    await foreach (Microsoft.Extensions.VectorData.VectorSearchResult<Faq> item in collection.SearchAsync(searchVector, 1))
-    {
-        searchResult.Prepend(item);
-        break;
-    }
+    //Microsoft.Extensions.VectorData.VectorSearchResult<Faq>[] searchResult = [];
+    //await foreach (Microsoft.Extensions.VectorData.VectorSearchResult<Faq> item in 
+    //    collection.SearchAsync(
+    //        searchVector, 
+    //        1
+    //        //,
+    //        //new Microsoft.Extensions.VectorData.VectorSearchOptions<Faq>()
+    //        //{
+    //        //    Filter = r => r.Category == "general"
+    //        //}
+    //        ))
+    //{
+    //    searchResult.Prepend(item);
+    //    break;
+    //}
 
-    var searchResultItems = searchResult.FirstOrDefault();
-    Console.WriteLine(searchResultItems!.Record.Answer);
-    Console.WriteLine(searchResultItems!.Score);
+    //var searchResultItems = searchResult.FirstOrDefault();
+    //Console.WriteLine(searchResultItems!.Record.Answer);
+    //Console.WriteLine(searchResultItems!.Score);
+
+    //var texSearch = new VectorStoreTextSearch<Faq>(collection, embeddingGenerator);
+    //var query = "Que horario hay de atencion al cliente";
+
+    //var results = 
+    //    await texSearch.GetTextSearchResultsAsync(
+    //    query, 
+    //    new() 
+    //    {
+    //       Top = 2,
+    //       Skip = 0,
+    //    });
+
+    //await foreach (var item in results.Results)
+    //{
+    //    Console.WriteLine(item.Name);
+    //    Console.WriteLine(item.Value);
+    //    Console.WriteLine(item.Link);
+    //}
 
     //DI?
     /*
-     * var services = new ServiceCollection();
+        * var services = new ServiceCollection();
 
         // Embeddings y chat de OpenAI
         services.AddOpenAIEmbeddingGenerator(
@@ -269,7 +320,7 @@ async Task<Kernel> InitializeKernels()
 
         var embedder = kernel.GetRequiredService<IEmbeddingGenerationService>();
         var memory = sp.GetRequiredService<IVectorStore>();
-     * 
+        * 
     // registrar el plugin una vez construido por DI
     //var invoicePlugin = kernel.Services.GetRequiredService<InvoicePlugin>();
     //kernel.Plugins.AddFromObject(invoicePlugin, "Facturas");
