@@ -96,20 +96,23 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
             .StartAsync("Pensando...", async _ =>
             {
                 var lastUserMsg = _chatHistory.LastOrDefault(m => m.Role == AuthorRole.User);
-                string query = lastUserMsg?.Items.OfType<Microsoft.SemanticKernel.TextContent>()
-                                   .FirstOrDefault()?.Text ?? "";
-                               
-                var embedder = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
-                var texSearch = new VectorStoreTextSearch<Faq>(collection!, embedder);
+                string query = lastUserMsg?.Items
+                    .OfType<Microsoft.SemanticKernel.TextContent>()
+                    .FirstOrDefault()?.Text ?? "";
 
-                var searchResults = await texSearch.GetTextSearchResultsAsync(
-                    query,
-                    new() { Top = 2 });
+                var embedder = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+                var queryEmbedding = await embedder.GenerateAsync(query);
+
+                var vectorStore = kernel.Services.GetRequiredService<InMemoryVectorStore>();
+                var searchResults = collection!.SearchAsync(
+                    queryEmbedding,
+                    top: 2,
+                    options: new VectorSearchOptions<Faq>());
 
                 string context = "";
-                await foreach (var item in searchResults.Results)
+                await foreach (var item in searchResults)
                 {
-                    context += $"- {item.Value}\n";
+                    context += $"- {item.Record.Answer}\n";
                 }
 
                 var augmentedUserMessage = $"Pregunta: {query}\n\nContexto relevante:\n{context}";
@@ -135,7 +138,6 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
         AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}\n");
     }
 }
-
 
 ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, string imagePathOrUrl)
 {
