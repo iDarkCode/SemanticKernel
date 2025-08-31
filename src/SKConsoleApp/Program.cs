@@ -112,7 +112,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
                     context += $"- {item.Record.Answer}\n";
                 }
 
-                var customerSupportFn = kernel.Plugins
+                var customerSupport = kernel.Plugins
                     .GetFunction("customer_support", "customer_support");
 
                 var args = new KernelArguments
@@ -121,7 +121,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
                     ["context"] = context
                 };
 
-                var promptResult = await kernel.InvokeAsync(customerSupportFn, args);
+                var promptResult = await kernel.InvokeAsync(customerSupport, args);
                 var augmentedUserMessage = promptResult.ToString();
                 _chatHistory.AddUserMessage(augmentedUserMessage);
 
