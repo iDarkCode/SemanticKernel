@@ -1,16 +1,14 @@
 using Microsoft.SemanticKernel;
-using SemanticKernel.Services;
 using SemanticKernel.Domain;
-using SemanticKernel.VectorStore;
+using SemanticKernel.Services;
 using System.ComponentModel;
 
 namespace SemanticKernel.Plugins;
 
-public sealed class InvoicePlugin(InvoiceService invoiceService, AggregationService aggregationService, VectorSearchService vectorSearch)
+public sealed class InvoicePlugin(InvoiceService invoiceService, AggregationService aggregationService)
 {
     private readonly InvoiceService _invoiceService = invoiceService;
     private readonly AggregationService _aggregationService = aggregationService;
-    private readonly VectorSearchService _vectorSearch = vectorSearch;
 
     [KernelFunction("obtener_factura")]
     [Description("Obtiene los detalles de una factura específica dado su código.")]
@@ -43,12 +41,5 @@ public sealed class InvoicePlugin(InvoiceService invoiceService, AggregationServ
     {
         var data = await _aggregationService.TotalsByYearAsync(ct);
         return data.Select(x => new { x.Year, x.Total });
-    }
-
-    [KernelFunction("buscar_semantico")]
-    public async Task<IEnumerable<object>> BuscarSemanticoAsync(string query, int topK = 5, CancellationToken ct = default)
-    {
-        var results = await _vectorSearch.SearchAsync(query, topK, ct);
-        return results.Select(r => new { r.Invoice.Id, r.Invoice.CustomerId, r.Invoice.Total, r.Invoice.Date, Score = r.Score });
     }
 }

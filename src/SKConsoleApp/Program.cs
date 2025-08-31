@@ -8,16 +8,13 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.Data;
-using Microsoft.SemanticKernel.Embeddings;
 using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using Microsoft.SemanticKernel.PromptTemplates.Liquid;
-using OpenAI.Embeddings;
-using SemanticKernel;
 using SemanticKernel.Domain;
+using SemanticKernel.Helpers;
 using SemanticKernel.Plugins;
+using SemanticKernel.Resources;
 using SemanticKernel.Services;
-using SemanticKernel.VectorStore;
 using Spectre.Console;
 using System.Text.Json;
 
@@ -106,7 +103,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
                 var vectorStore = kernel.Services.GetRequiredService<InMemoryVectorStore>();
                 var searchResults = collection!.SearchAsync(
                     queryEmbedding,
-                    top: 2,
+                    top: 3,
                     options: new VectorSearchOptions<Faq>());
 
                 string context = "";
@@ -115,7 +112,17 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
                     context += $"- {item.Record.Answer}\n";
                 }
 
-                var augmentedUserMessage = $"Pregunta: {query}\n\nContexto relevante:\n{context}";
+                var customerSupportFn = kernel.Plugins
+                    .GetFunction("customer_support", "customer_support");
+
+                var args = new KernelArguments
+                {
+                    ["query"] = query,
+                    ["context"] = context
+                };
+
+                var promptResult = await kernel.InvokeAsync(customerSupportFn, args);
+                var augmentedUserMessage = promptResult.ToString();
                 _chatHistory.AddUserMessage(augmentedUserMessage);
 
                 ChatMessageContent? response =
@@ -138,6 +145,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings)
         AnsiConsole.MarkupLine($"[bold red]Error:[/] {ex.Message}\n");
     }
 }
+
 
 ChatMessageContentItemCollection? CreateUserContentAsync(string additionalText, string imagePathOrUrl)
 {
@@ -218,7 +226,6 @@ async Task<Kernel> InitializeKernels()
     kernelBuilder.Services.AddSingleton<IFunctionInvocationFilter, FunctionInvocationFilter>();
     kernelBuilder.Services.AddSingleton<InvoiceService>();
     kernelBuilder.Services.AddSingleton<AggregationService>();
-    kernelBuilder.Services.AddSingleton<VectorSearchService>();
     kernelBuilder.Services.AddSingleton<InvoicePlugin>();
     kernelBuilder.Services.AddSingleton<IFileService, FileService>();
     kernelBuilder.Services.AddSingleton<FilePlugin>();
@@ -229,9 +236,20 @@ async Task<Kernel> InitializeKernels()
     kernelBuilder.Plugins.AddFromType<InvoicePlugin>();
     kernelBuilder.Plugins.AddFromType<FilePlugin>();
 
-    //construimos el kernel
     var kernel = kernelBuilder.Build();
 
+    var promptPath = Path.Combine("./Resources/Prompts", "customer_support.yaml");
+    var promptContent = File.ReadAllText(promptPath);
+
+    var function = kernel.CreateFunctionFromPromptYaml(promptContent,
+        new HandlebarsPromptTemplateFactory());
+
+    var pluginTemplate = KernelPluginFactory.CreateFromFunctions(
+        "customer_support",              
+        [function]        
+    );
+
+    kernel.Plugins.Add(pluginTemplate);
 
     var vectorStore = new InMemoryVectorStore();
     collection = new InMemoryCollection<string, Faq>("faqs");
@@ -255,50 +273,7 @@ async Task<Kernel> InitializeKernels()
 
     var record = await collection.GetAsync("faq1");
     Console.WriteLine($"vectorCollection: {record!.Answer}");
-
-   // string textSearch = "Que horario hay de atencion al cliente";
-
-    //var searchVector = await embeddingGenerator.GenerateAsync(textSearch);
-
-    //Microsoft.Extensions.VectorData.VectorSearchResult<Faq>[] searchResult = [];
-    //await foreach (Microsoft.Extensions.VectorData.VectorSearchResult<Faq> item in 
-    //    collection.SearchAsync(
-    //        searchVector, 
-    //        1
-    //        //,
-    //        //new Microsoft.Extensions.VectorData.VectorSearchOptions<Faq>()
-    //        //{
-    //        //    Filter = r => r.Category == "general"
-    //        //}
-    //        ))
-    //{
-    //    searchResult.Prepend(item);
-    //    break;
-    //}
-
-    //var searchResultItems = searchResult.FirstOrDefault();
-    //Console.WriteLine(searchResultItems!.Record.Answer);
-    //Console.WriteLine(searchResultItems!.Score);
-
-    //var texSearch = new VectorStoreTextSearch<Faq>(collection, embeddingGenerator);
-    //var query = "Que horario hay de atencion al cliente";
-
-    //var results = 
-    //    await texSearch.GetTextSearchResultsAsync(
-    //    query, 
-    //    new() 
-    //    {
-    //       Top = 2,
-    //       Skip = 0,
-    //    });
-
-    //await foreach (var item in results.Results)
-    //{
-    //    Console.WriteLine(item.Name);
-    //    Console.WriteLine(item.Value);
-    //    Console.WriteLine(item.Link);
-    //}
-
+      
     //DI?
     /*
         * var services = new ServiceCollection();
@@ -331,7 +306,6 @@ async Task<Kernel> InitializeKernels()
     //var systemPlugin = kernel.Services.GetRequiredService<SystemInfoPlugin>();
     //kernel.Plugins.AddFromObject(systemPlugin, "Sistema");
     */
-
 
     _executionSettings = new OpenAIPromptExecutionSettings
     {
@@ -587,25 +561,5 @@ async Task PromptFunctionsYamlTemplates()
         { "length", "3" }
     }));
 }
-
-//// Obtener estado de una factura específica
-//await AskQuestionAsync("¿Cuál es el estado de la factura INV-0023?");
-
-//// Buscar facturas de un cliente en un rango de fechas
-//await AskQuestionAsync("Muéstrame las facturas de CUST003 entre enero y marzo 2024");
-
-//// Buscar todas las facturas de un cliente sin rango
-//await AskQuestionAsync("Muéstrame todas las facturas de CUST002");
-
-
-//async Task AskQuestionAsync(string question)
-//{
-//    Console.WriteLine($"Pregunta: {question}");
-
-//    // SK analizará la pregunta y seleccionará la función correcta
-//    var result = await kernel.InvokePromptAsync(question);
-
-//    Console.WriteLine($"Respuesta: {result}\n");
-//}
 
 public partial class Program { }

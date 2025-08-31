@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SemanticKernel;
+namespace SemanticKernel.Resources;
 
 internal static class EmbeddedResource
 {
