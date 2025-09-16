@@ -10,6 +10,7 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.InMemory;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using SK.Course;
 using SK.Course.Plugins;
 using Spectre.Console;
 using System.Text.Json;
@@ -70,9 +71,14 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
                 string prompt = await BuildPrompt(userQuery, context);
                 //Agregar al historial del chat
                 _chatHistory.AddUserMessage(userQuery);
+
+                var reducer = new MessagesReducer(3);
+                // reducir historial antes de pasarlo al LLM
+                var reducedHistory = await _chatHistory.ReduceAsync(reducer, CancellationToken.None);
+
                 //Invocar LLM con function calling: el LLM decide si usar plugin o vector store
                 var response = await _chatCompletionService.GetChatMessageContentAsync(
-                    _chatHistory,
+                    reducedHistory,
                     _executionSettings,
                     kernel
                 );
@@ -109,19 +115,24 @@ async Task<string> BuildContextAsync(Embedding<float> queryEmbedding)
         queryEmbedding, 
         top: 3, 
         options: new VectorSearchOptions<CustomerRFMDto>());
-
+    
+    int count = 0;
     await foreach (var item in searchResults)
     {
+        if (count >= 5) 
+            break;
+        
         contextBuilder.AppendLine($"- Cliente {item.Record.NumCliente}, " +
                                   $"  Saldo={item.Record.Saldo}, " +
                                   $"  Frecuencia={item.Record.Frecuencia}");
+        count++;
     }
 
     return contextBuilder.ToString();
 }
 
-// Template de prompt eficiente
-async Task<string> BuildPrompt(string userQuery, string context)
+// Template de prompt
+Task<string> BuildPrompt(string userQuery, string context)
 {
     var template = @"
 Eres un asistente experto en clientes de casinos. 
@@ -138,23 +149,21 @@ Responde de forma clara, indicando el cliente, saldo, frecuencia y cualquier dat
 Si necesitas más información, puedes invocar las funciones disponibles en el plugin.
 ";
 
-    // Compilar plantilla Handlebars
     var compiledTemplate = Handlebars.Compile(template);
 
-    // Renderizar plantilla con los datos
     var rendered = compiledTemplate(new
     {
-        userQuery = userQuery,
-        context = context
+        userQuery,
+        context
     });
 
-    return rendered;
+    return Task.FromResult(rendered);
 }
 
 // Inicialización Kernel
 async Task<Kernel> InitializeAsync()
 {
-    var openAIKey =  Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey =Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -219,7 +228,6 @@ async Task<Kernel> InitializeAsync()
 
 string BuildCustomerText(CustomerRFMDto c) =>
     $"Cliente {c.NumCliente}, Sesión {c.Sesion}, Saldo {c.Saldo}, Frecuencia {c.Frecuencia}, Última visita {c.FechaUltimaVisita}.";
-
 
 void ShowWelcomeMessage()
 {
