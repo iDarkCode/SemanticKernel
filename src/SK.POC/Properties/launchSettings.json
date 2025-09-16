@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Cirsa.CRM.Snowflake.SK": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}

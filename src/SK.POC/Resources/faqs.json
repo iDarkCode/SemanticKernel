@@ -1,0 +1,261 @@
+[
+  {
+    "Key": "faq1",
+    "Category": "soporte",
+    "Question": "¿Cuál es el horario de atención?",
+    "Answer": "Atendemos de lunes a viernes de 9:00 a 18:00."
+  },
+  {
+    "Key": "faq2",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Cómo contacto con soporte?",
+    "Answer": "Puedes escribirnos a soporte@empresa.com."
+  },
+  {
+    "Key": "faq3",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Dónde están ubicados?",
+    "Answer": "Nuestra oficina principal está en Madrid."
+  },
+  {
+    "Key": "faq4",
+    "Category": "general",
+    "Question": "¿Qué servicios ofrece la empresa?",
+    "Answer": "Ofrecemos soluciones de facturación, soporte técnico y asesoramiento."
+  },
+  {
+    "Key": "faq5",
+    "Category": "general",
+    "Question": "¿Puedo cambiar mis datos personales?",
+    "Answer": "Sí, desde tu perfil puedes actualizar dirección, correo y teléfono."
+  },
+  {
+    "Key": "faq6",
+    "Category": "facturas",
+    "Question": "¿Cómo descargo una factura?",
+    "Answer": "Accede al portal de clientes y selecciona la opción 'Descargar factura'."
+  },
+  {
+    "Key": "faq7",
+    "Category": "facturas",
+    "Question": "¿Puedo solicitar una factura duplicada?",
+    "Answer": "Sí, solicita una copia desde el área de facturación."
+  },
+  {
+    "Key": "faq8",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué métodos de pago aceptan?",
+    "Answer": "Aceptamos tarjeta, transferencia bancaria y PayPal."
+  },
+  {
+    "Key": "faq9",
+    "Category": "general",
+    "Question": "¿La plataforma está disponible en móviles?",
+    "Answer": "Sí, contamos con versión web adaptada a móviles."
+  },
+  {
+    "Key": "faq10",
+    "Category": "facturas",
+    "Question": "¿Qué hago si no encuentro una factura?",
+    "Answer": "Contacta con soporte indicando el código o fecha aproximada."
+  },
+  {
+    "Key": "faq11",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Hay permanencia en el contrato?",
+    "Answer": "No exigimos permanencia, puedes cancelar cuando quieras."
+  },
+  {
+    "Key": "faq12",
+    "Category": "general",
+    "Question": "¿Ofrecen capacitación en el uso del sistema?",
+    "Answer": "Sí, brindamos tutoriales en video y guías paso a paso."
+  },
+  {
+    "Key": "faq13",
+    "Category": "facturas",
+    "Question": "¿Cuánto tiempo guardan mis facturas?",
+    "Answer": "Tus facturas se almacenan por un mínimo de 5 años."
+  },
+  {
+    "Key": "faq14",
+    "Category": "general",
+    "Question": "¿Tienen planes para pymes y autónomos?",
+    "Answer": "Sí, disponemos de planes escalables según el tamaño de tu empresa."
+  },
+  {
+    "Key": "faq15",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué ocurre si incumplo las condiciones?",
+    "Answer": "Podemos suspender temporalmente el servicio según lo establecido en el contrato."
+  },
+  {
+    "Key": "faq16",
+    "Category": "facturas",
+    "Question": "¿Puedo pagar una factura parcialmente?",
+    "Answer": "No, las facturas deben ser abonadas en su totalidad."
+  },
+  {
+    "Key": "faq17",
+    "Category": "general",
+    "Question": "¿Tienen soporte en varios idiomas?",
+    "Answer": "Sí, ofrecemos soporte en español e inglés."
+  },
+  {
+    "Key": "faq18",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Cómo se gestionan los reembolsos?",
+    "Answer": "Los reembolsos se procesan en un plazo máximo de 15 días hábiles."
+  },
+  {
+    "Key": "faq19",
+    "Category": "facturas",
+    "Question": "¿Puedo recibir mis facturas por correo electrónico?",
+    "Answer": "Sí, activa la opción de envío automático en tu perfil."
+  },
+  {
+    "Key": "faq20",
+    "Category": "general",
+    "Question": "¿Tienen API disponible?",
+    "Answer": "Sí, contamos con API documentada para integración con otros sistemas."
+  },
+  {
+    "Key": "faq21",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué pasa si cambio de plan?",
+    "Answer": "La facturación se ajusta proporcionalmente al periodo utilizado."
+  },
+  {
+    "Key": "faq22",
+    "Category": "facturas",
+    "Question": "¿Se pueden anular facturas ya emitidas?",
+    "Answer": "Solo es posible emitir notas de crédito para corregir facturas."
+  },
+  {
+    "Key": "faq23",
+    "Category": "general",
+    "Question": "¿Ofrecen prueba gratuita?",
+    "Answer": "Sí, disponemos de un periodo de prueba de 14 días."
+  },
+  {
+    "Key": "faq24",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué jurisdicción aplica en caso de conflicto?",
+    "Answer": "Se aplica la jurisdicción de Madrid, España."
+  },
+  {
+    "Key": "faq25",
+    "Category": "facturas",
+    "Question": "¿Qué significan los estados de factura?",
+    "Answer": "Pendiente, pagada o vencida según corresponda."
+  },
+  {
+    "Key": "faq26",
+    "Category": "general",
+    "Question": "¿Es seguro el almacenamiento de mis datos?",
+    "Answer": "Sí, usamos cifrado y cumplimos con RGPD."
+  },
+  {
+    "Key": "faq27",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Puedo transferir mi cuenta a otra persona?",
+    "Answer": "No, las cuentas son personales e intransferibles."
+  },
+  {
+    "Key": "faq28",
+    "Category": "facturas",
+    "Question": "¿Qué hago si el importe de la factura es incorrecto?",
+    "Answer": "Solicita revisión a soporte con el código de la factura."
+  },
+  {
+    "Key": "faq29",
+    "Category": "general",
+    "Question": "¿Puedo usar el sistema sin conexión?",
+    "Answer": "No, el sistema requiere conexión a internet."
+  },
+  {
+    "Key": "faq30",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Cómo se manejan mis datos personales?",
+    "Answer": "Tus datos se tratan según la política de privacidad publicada."
+  },
+  {
+    "Key": "faq31",
+    "Category": "facturas",
+    "Question": "¿Se pueden emitir facturas en dólares?",
+    "Answer": "Sí, admitimos facturación en euros y dólares."
+  },
+  {
+    "Key": "faq32",
+    "Category": "general",
+    "Question": "¿Ofrecen integraciones con software contable?",
+    "Answer": "Sí, podemos integrar con sistemas contables externos."
+  },
+  {
+    "Key": "faq33",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué sucede si no pago a tiempo?",
+    "Answer": "El servicio puede ser suspendido hasta regularizar el pago."
+  },
+  {
+    "Key": "faq34",
+    "Category": "facturas",
+    "Question": "¿Se puede cambiar la dirección en la factura?",
+    "Answer": "Sí, siempre que se modifique antes de su emisión."
+  },
+  {
+    "Key": "faq35",
+    "Category": "general",
+    "Question": "¿La plataforma tiene actualizaciones automáticas?",
+    "Answer": "Sí, se actualiza sin interrumpir tu servicio."
+  },
+  {
+    "Key": "faq36",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Existen cargos ocultos?",
+    "Answer": "No, todos los precios se detallan en la tabla de tarifas."
+  },
+  {
+    "Key": "faq37",
+    "Category": "facturas",
+    "Question": "¿Puedo generar facturas recurrentes?",
+    "Answer": "Sí, puedes programar facturación automática mensual."
+  },
+  {
+    "Key": "faq38",
+    "Category": "general",
+    "Question": "¿Se puede exportar la información?",
+    "Answer": "Sí, en formatos Excel, PDF y CSV."
+  },
+  {
+    "Key": "faq39",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Qué pasa si cierro mi cuenta?",
+    "Answer": "Tu información se elimina en un plazo de 30 días."
+  },
+  {
+    "Key": "faq40",
+    "Category": "facturas",
+    "Question": "¿Cómo consulto mis facturas antiguas?",
+    "Answer": "Accede al historial en el portal de facturación."
+  },
+  {
+    "Key": "faq41",
+    "Category": "general",
+    "Question": "¿Ofrecen descuentos por volumen?",
+    "Answer": "Sí, aplicamos tarifas preferenciales según el número de usuarios."
+  },
+  {
+    "Key": "faq42",
+    "Category": "terminos-y-condiciones",
+    "Question": "¿Puedo usar la plataforma desde cualquier país?",
+    "Answer": "Sí, siempre que la legislación local lo permita."
+  },
+  {
+    "Key": "faq43",
+    "Category": "facturas",
+    "Question": "¿Qué hago si una factura aparece como vencida por error?",
+    "Answer": "Solicita verificación a soporte para corregir el estado."
+  }
+]
+
