@@ -2,6 +2,7 @@
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0050
 
+using HandlebarsDotNet;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.VectorData;
@@ -66,9 +67,9 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
                 string context = await BuildContextAsync(queryEmbedding);
 
                 //Preparar prompt usando template
-                string prompt = BuildPrompt(kernel, userQuery, context);
+                string prompt = await BuildPrompt(userQuery, context);
                 //Agregar al historial del chat
-                _chatHistory.AddUserMessage(prompt);
+                _chatHistory.AddUserMessage(userQuery);
                 //Invocar LLM con function calling: el LLM decide si usar plugin o vector store
                 var response = await _chatCompletionService.GetChatMessageContentAsync(
                     _chatHistory,
@@ -87,7 +88,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
                 //Mostrar salida
                 AnsiConsole.MarkupLine($"[bold yellow]Prompt generado:[/]\n{prompt}\n");
             });
-
+       
         var lastMessage = _chatHistory.LastOrDefault();
         AnsiConsole.MarkupLine($"[bold green]Assistant:[/] {lastMessage}\n");
     }
@@ -120,7 +121,7 @@ async Task<string> BuildContextAsync(Embedding<float> queryEmbedding)
 }
 
 // Template de prompt eficiente
-string BuildPrompt(Kernel kernel, string userQuery, string context)
+async Task<string> BuildPrompt(string userQuery, string context)
 {
     var template = @"
 Eres un asistente experto en clientes de casinos. 
@@ -137,33 +138,23 @@ Responde de forma clara, indicando el cliente, saldo, frecuencia y cualquier dat
 Si necesitas más información, puedes invocar las funciones disponibles en el plugin.
 ";
 
-    //Obtener el factory de plantillas
-    var factory = kernel.Services.GetRequiredService<IPromptTemplateFactory>();
+    // Compilar plantilla Handlebars
+    var compiledTemplate = Handlebars.Compile(template);
 
-    //Compilar plantilla handlebars
-    var promptTemplate = factory.Create(new PromptTemplateConfig
+    // Renderizar plantilla con los datos
+    var rendered = compiledTemplate(new
     {
-        Name = "CasinoAssistantTemplate",
-        Template = template,
-        TemplateFormat = "handlebars"
+        userQuery = userQuery,
+        context = context
     });
 
-    //Renderizar con datos
-    var rendered = promptTemplate.RenderAsync(
-        kernel,
-        new KernelArguments
-        {
-            ["userQuery"] = userQuery,
-            ["context"] = context
-        });
-
-    return rendered.Result;
+    return rendered;
 }
 
 // Inicialización Kernel
 async Task<Kernel> InitializeAsync()
 {
-    var openAIKey = Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey =  Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -187,20 +178,37 @@ async Task<Kernel> InitializeAsync()
     await collection.EnsureCollectionExistsAsync();
 
     //Cargar datos
-    var rfms = JsonSerializer.Deserialize<List<CustomerRFMDto>>(File.ReadAllText("./Resources/customers.json"))!.ToList();
+    var rfms = JsonSerializer.Deserialize<List<CustomerRFMDto>>(File.ReadAllText("../../../Resources/customers.json"))!.ToList();
+
+    var random = new Random();
+    var shuffledRfms = rfms.OrderBy(_ => random.Next()).Take(200).ToList();
 
     var embedder = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
+   
+    
+    // Generar embeddings en lotes
+    const int batchSize = 10;
+    var batches = shuffledRfms.Select((c, index) => new { c, index })
+                      .GroupBy(x => x.index / batchSize)
+                      .Select(g => g.Select(x => x.c).ToList());
 
-    //Generar embeddings
-    var tasks = rfms.Select(async c =>
+    foreach (var batch in batches)
     {
-        var text = BuildCustomerText(c);
-        c.DefinitionEmbedding = await embedder.GenerateAsync(text);
-    });
+        var tasks = batch.Select(async c =>
+        {
+            var text = BuildCustomerText(c);
+            c.DefinitionEmbedding = await embedder.GenerateAsync(text);
+        });
 
-    await Task.WhenAll(tasks);
+        await Task.WhenAll(tasks);
+    }
 
-    await collection.UpsertAsync(rfms);
+    await collection.UpsertAsync(shuffledRfms);
+
+    _executionSettings = new OpenAIPromptExecutionSettings
+    {
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+    };
 
     _vectorCollection = collection;
     _chatCompletionService = kernel.GetRequiredService<IChatCompletionService>();

@@ -7,7 +7,7 @@ namespace SK.Course.Plugins;
 public class CustomerRfmPlugin()
 {
     private readonly List<CustomerRFMDto> _customers = JsonSerializer.Deserialize<List<CustomerRFMDto>>(
-            File.ReadAllText("./Resources/customers.json")) ?? [];
+            File.ReadAllText("../../../Resources/customers.json")) ?? [];
 
 
     [KernelFunction]
