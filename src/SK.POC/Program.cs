@@ -69,16 +69,13 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
 
                 //Preparar prompt usando template
                 string prompt = await BuildPrompt(userQuery, context);
-                //Agregar al historial del chat
-                _chatHistory.AddUserMessage(userQuery);
 
-                var reducer = new MessagesReducer(3);
-                // reducir historial antes de pasarlo al LLM
+                var reducer = new ChatHistoryTruncationReducer(targetCount: 4, thresholdCount: 8);
                 var reducedHistory = await _chatHistory.ReduceAsync(reducer, CancellationToken.None);
 
                 //Invocar LLM con function calling: el LLM decide si usar plugin o vector store
                 var response = await _chatCompletionService.GetChatMessageContentAsync(
-                    reducedHistory,
+                    prompt,
                     _executionSettings,
                     kernel
                 );
@@ -92,7 +89,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
                 _chatHistory.AddAssistantMessage(text);
 
                 //Mostrar salida
-                AnsiConsole.MarkupLine($"[bold yellow]Prompt generado:[/]\n{prompt}\n");
+               // AnsiConsole.MarkupLine($"[bold yellow]Prompt generado:[/]\n{prompt}\n");
             });
        
         var lastMessage = _chatHistory.LastOrDefault();
@@ -119,13 +116,14 @@ async Task<string> BuildContextAsync(Embedding<float> queryEmbedding)
     int count = 0;
     await foreach (var item in searchResults)
     {
-        if (count >= 5) 
+        count++;
+        if (count > 3) 
             break;
         
         contextBuilder.AppendLine($"- Cliente {item.Record.NumCliente}, " +
                                   $"  Saldo={item.Record.Saldo}, " +
                                   $"  Frecuencia={item.Record.Frecuencia}");
-        count++;
+       
     }
 
     return contextBuilder.ToString();
@@ -163,7 +161,8 @@ Si necesitas más información, puedes invocar las funciones disponibles en el p
 // Inicialización Kernel
 async Task<Kernel> InitializeAsync()
 {
-    var openAIKey =Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    var openAIKey =  Environment.GetEnvironmentVariable("SKCourseOpenAIKey");
+    
     if (string.IsNullOrEmpty(openAIKey))
         throw new InvalidOperationException("Environment variable 'SKCourseOpenAIKey' is missing.");
 
@@ -193,30 +192,33 @@ async Task<Kernel> InitializeAsync()
     var shuffledRfms = rfms.OrderBy(_ => random.Next()).Take(200).ToList();
 
     var embedder = kernel.GetRequiredService<IEmbeddingGenerator<string, Embedding<float>>>();
-   
-    
-    // Generar embeddings en lotes
-    const int batchSize = 10;
-    var batches = shuffledRfms.Select((c, index) => new { c, index })
-                      .GroupBy(x => x.index / batchSize)
-                      .Select(g => g.Select(x => x.c).ToList());
 
-    foreach (var batch in batches)
+    const int concurrency = 4;
+    using var semaphore = new SemaphoreSlim(concurrency);
+
+    var embedTasks = shuffledRfms.Select(async c =>
     {
-        var tasks = batch.Select(async c =>
+        await semaphore.WaitAsync();
+        try
         {
             var text = BuildCustomerText(c);
             c.DefinitionEmbedding = await embedder.GenerateAsync(text);
-        });
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    });
 
-        await Task.WhenAll(tasks);
-    }
+    await Task.WhenAll(embedTasks);
 
     await collection.UpsertAsync(shuffledRfms);
 
     _executionSettings = new OpenAIPromptExecutionSettings
     {
-        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto()
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(autoInvoke: false),
+        MaxTokens = 1000,
+        Temperature = 0.2
     };
 
     _vectorCollection = collection;
