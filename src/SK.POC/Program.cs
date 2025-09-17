@@ -83,7 +83,7 @@ async Task GenerateAssistantResponse(Kernel kernel, KernelArguments settings, st
                 var text = response?.Items
                     .OfType<Microsoft.SemanticKernel.TextContent>()
                     .Select(t => t.Text)
-                    .FirstOrDefault() ?? "[Sin Respuesta]";
+                    .FirstOrDefault() ?? "Sin Respuesta";
 
                 //Agregar respuesta Llm
                 _chatHistory.AddAssistantMessage(text);
@@ -216,7 +216,7 @@ async Task<Kernel> InitializeAsync()
 
     _executionSettings = new OpenAIPromptExecutionSettings
     {
-        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(autoInvoke: false),
+        FunctionChoiceBehavior = FunctionChoiceBehavior.Auto(),
         MaxTokens = 1000,
         Temperature = 0.2
     };

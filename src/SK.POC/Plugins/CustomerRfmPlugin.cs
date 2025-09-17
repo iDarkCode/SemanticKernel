@@ -40,7 +40,7 @@ public class CustomerRfmPlugin()
         DateTime sesion)
     {
         return _customers.Where(c =>
-            c.IdCentro == idCentro && c.Sesion?.Date == sesion.Date);
+            c.IdCentro == idCentro && c.Sesion?.Date == sesion.Date).Take(10);
     }
 
     [KernelFunction]
@@ -54,7 +54,18 @@ public class CustomerRfmPlugin()
             c.IdCentro == idCentro && 
             c.Sesion >= start && 
             c.Sesion <= end);
-    }   
+    }
+
+    [KernelFunction]
+    [Description("Obtiene todos los identificadores de centros activos")]
+    public IEnumerable<int?> GetActiveStores()
+    {
+        return _customers
+             .Select(c => c.IdCentro)
+             .Where(id => id.HasValue) 
+             .Distinct()
+             .OrderByDescending(c => c.Value);
+    }
 
     [KernelFunction]
     [Description("Obtiene el cliente con mayor saldo en una sala (cliente King)")]
@@ -68,11 +79,11 @@ public class CustomerRfmPlugin()
     }
 
     [KernelFunction]
-    [Description("Obtiene clientes filtrados por KPIs y condiciones avanzadas")]
+    [Description("Obtiene los primeros 10 clientes filtrados por KPIs y condiciones avanzadas y ordenados por saldo")]
     public IEnumerable<CustomerRFMDto> GetCustomersByKpis(CustomerKpiFilterRequest filtros)
     {
         var query = _customers.AsQueryable();
-        query = CustomerKpiFilterBuilder.ApplyFilters(query, filtros);
+        query = CustomerKpiFilterBuilder.ApplyFilters(query, filtros).OrderByDescending(c => c.Saldo).Take(10);
         return [.. query];
     }
 }
